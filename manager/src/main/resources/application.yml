@@ -1,0 +1,22 @@
+spring:
+  mvc:
+    view:
+      prefix: /WEB-INF/jsp/
+      suffix: .jsp
+
+  redis:
+    password:
+    timeout: 6000
+    cluster:
+      max-redirects: 5
+      nodes:
+        - 10.143.139.12:8200
+        - 10.143.139.12:8201
+        - 10.143.139.12:8202
+        - 10.143.139.12:8203
+        - 10.143.139.12:8204
+        - 10.143.139.12:8205
+log:
+  out:
+    path: /home/wang_hq/app/manager/log
+
