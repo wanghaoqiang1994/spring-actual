@@ -109,11 +109,12 @@ public class ManagerController {
         try{
             //shiro帮我们匹配密码什么的，我们只需要把东西传给它，它会根据我们在Realm里认证方法设置的来验证
             subject.login(token);
-            return "redirect:/success";
+            return "redirect:/user/getList";
         }catch (Exception e){
             logger.info("出现错误，",e);
         }
 
+        //不用shiro的登陆实现
         /*if(type.equals("admin")){
             logger.info("管理员登陆...");
             indexService.login(ManagerConstant.LOGIN_ADMIN,username,password);
