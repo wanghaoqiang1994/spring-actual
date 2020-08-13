@@ -23,3 +23,7 @@ log:
   out:
     path: /home/wang_hq/app/api/log
 
+#是否启动redis循环监听队列。0：否 1：是
+redisMq:
+  flag: 0
+
