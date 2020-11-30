@@ -1,0 +1,10 @@
+spring:
+  mvc:
+    view:
+      prefix: /WEB-INF/jsp/
+      suffix: .jsp
+log:
+  out:
+    path: /home/wang_hq/app/plat/log
+server:
+  port: 8080
