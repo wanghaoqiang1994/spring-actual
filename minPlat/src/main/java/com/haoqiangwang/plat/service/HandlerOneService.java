@@ -13,10 +13,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
+import java.io.*;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -27,8 +24,12 @@ public class HandlerOneService {
 
     private static final Logger logger = LoggerFactory.getLogger(HandlerOneService.class);
 
+    public static String outputFile = "D:\\testOne.xls";
+
+
     /**
      * 处理背景颜色和字体
+     *
      * @param saveFile
      * @param suffixName
      */
@@ -36,16 +37,25 @@ public class HandlerOneService {
         logger.info("进行业务处理...");
         try {
             FileInputStream fileInputStream = new FileInputStream(saveFile);
+            Workbook workbook = null;
             if (suffixName.equals(".xlsx")) {
                 logger.info("文件为.xlsx结尾的...");
-                operateXSSFWork(fileInputStream);
+                workbook = operateXSSFWork(fileInputStream);
             }
             if (suffixName.equals(".xls")) {
                 logger.info("文件为.xls结尾的...");
-                operateHSSFWork(fileInputStream);
+                workbook = operateHSSFWork(fileInputStream);
             }
 
-        }catch (Exception e){
+            //将工作簿中的内容写入文件
+            logger.info("创建新文件为：{}", saveFile.getPath());
+            FileOutputStream fileOutputStream = new FileOutputStream(new File(saveFile.getPath()));
+            workbook.write(fileOutputStream);
+            fileOutputStream.flush();
+            fileOutputStream.close();
+            workbook.close();
+
+        } catch (Exception e) {
 
             logger.error("业务处理出现异常" + e);
         }
@@ -53,112 +63,137 @@ public class HandlerOneService {
 
     /**
      * 判断是否为数字类型
+     *
      * @param cellVal
      * @return
      */
-    public boolean isNumber(String cellVal){
+    public boolean isNumber(String cellVal) {
         Pattern pattern = Pattern.compile("[0-9]*");
         return pattern.matcher(cellVal).matches();
     }
 
     /**
      * 得到加粗，填充黄色背景
+     *
      * @param hssfWorkbook
      * @return
      */
-    public HSSFCellStyle getStyleHssf(HSSFWorkbook hssfWorkbook){
+    public HSSFCellStyle getStyleHssf(HSSFWorkbook hssfWorkbook) {
         HSSFFont font = hssfWorkbook.createFont();
         font.setBoldweight(HSSFFont.BOLDWEIGHT_BOLD);//粗体显示
 
         HSSFCellStyle hssfCellStyle = hssfWorkbook.createCellStyle();
         hssfCellStyle.setFont(font);
-        hssfCellStyle.setFillBackgroundColor(HSSFColor.YELLOW.index);
+        hssfCellStyle.setFillForegroundColor(HSSFColor.YELLOW.index);
+        hssfCellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
         return hssfCellStyle;
     }
 
     /**
      * 得到加粗，填充黄色背景
+     *
      * @param xssfWorkbook
      * @return
      */
-    public XSSFCellStyle getStyleXssf(XSSFWorkbook xssfWorkbook){
+    public XSSFCellStyle getStyleXssf(XSSFWorkbook xssfWorkbook, boolean flag) {
         XSSFFont font = xssfWorkbook.createFont();
-        font.setBoldweight(HSSFFont.BOLDWEIGHT_BOLD);//粗体显示
+        if(flag) {
+            font.setBoldweight(HSSFFont.BOLDWEIGHT_BOLD);//粗体显示
+        }
 
-        XSSFCellStyle  xssfCellStyle = xssfWorkbook.createCellStyle();
+        XSSFCellStyle xssfCellStyle = xssfWorkbook.createCellStyle();
         xssfCellStyle.setFont(font);
-        xssfCellStyle.setFillBackgroundColor(HSSFColor.YELLOW.index);
+        xssfCellStyle.setFillForegroundColor(HSSFColor.YELLOW.index);
+        xssfCellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
         return xssfCellStyle;
     }
 
     /**
      * 处理xSSF文件 .xlsx结尾
+     *
      * @param fileInputStream
      * @throws Exception
      */
-    public void operateXSSFWork(FileInputStream fileInputStream) throws Exception{
+    public Workbook operateXSSFWork(FileInputStream fileInputStream) throws Exception {
         XSSFWorkbook xssfWorkbook = new XSSFWorkbook(fileInputStream);
         //获取sheet页数
         int sumSheet = xssfWorkbook.getNumberOfSheets();
         logger.info("此文件共有sheet页数为：{}", sumSheet);
-        for(int i=0; i<sumSheet; i++){
+        for (int i = 0; i < sumSheet; i++) {
             XSSFSheet xssfSheet = xssfWorkbook.getSheetAt(i);
             //获得总列数
-            int coloumNum=xssfSheet.getRow(0).getPhysicalNumberOfCells();
+            int coloumNum = xssfSheet.getRow(0).getPhysicalNumberOfCells();
             //获得总行数
-            int rowNum=xssfSheet.getPhysicalNumberOfRows();
+            int rowNum = xssfSheet.getPhysicalNumberOfRows();
             logger.info("总共行数为：{}", rowNum);
-            for(int j=0; j<rowNum; j++){
+            for (int j = 0; j < rowNum; j++) {
+                //获取每行
+                XSSFRow xssfRow = xssfSheet.getRow(j);
                 //获取到每行第三列的值
-                XSSFCell xssfCell = xssfSheet.getRow(j).getCell(2);
+                XSSFCell xssfCell = xssfRow.getCell(2);
                 //获取单元格的值
                 String cellVal = getCellValue(xssfCell);
                 logger.info("单元格的值为：{}", cellVal);
                 //满足此条件
-                if(!StringUtils.isEmpty(cellVal) && cellVal.length() ==4 && isNumber(cellVal)){
+                if (!StringUtils.isEmpty(cellVal) && cellVal.length() == 4 && isNumber(cellVal)) {
                     //进行操作
                     logger.info("进行格式操作...");
-                    xssfSheet.getRow(j).setRowStyle(getStyleXssf(xssfWorkbook));
+                    //xssfRow.setRowStyle(getStyleXssf(xssfWorkbook));
+                    int cells = xssfRow.getPhysicalNumberOfCells();
+                    for(int m=0; m<cells; m++){
+                        XSSFCell tempCell = xssfRow.getCell(m);
+                        if(m == 2) {
+                            tempCell.setCellStyle(getStyleXssf(xssfWorkbook, true));
+                        }else{
+                            tempCell.setCellStyle(getStyleXssf(xssfWorkbook, false));
+                        }
+                    }
                 }
             }
         }
+        return xssfWorkbook;
     }
 
     /**
      * 处理HSSF文件 .xls结尾
+     *
      * @param fileInputStream
      * @throws Exception
      */
-    public void operateHSSFWork(FileInputStream fileInputStream) throws Exception{
+    public Workbook operateHSSFWork(FileInputStream fileInputStream) throws Exception {
         HSSFWorkbook hssfWorkbook = new HSSFWorkbook(fileInputStream);
         //获取sheet页数
         int sumSheet = hssfWorkbook.getNumberOfSheets();
         logger.info("此文件共有sheet页数为：{}", sumSheet);
-        for(int i=0; i<sumSheet; i++){
+        for (int i = 0; i < sumSheet; i++) {
             HSSFSheet hssfSheet = hssfWorkbook.getSheetAt(i);
             //获得总列数
-            int coloumNum=hssfSheet.getRow(0).getPhysicalNumberOfCells();
+            int coloumNum = hssfSheet.getRow(0).getPhysicalNumberOfCells();
             //获得总行数
-            int rowNum=hssfSheet.getPhysicalNumberOfRows();
+            int rowNum = hssfSheet.getPhysicalNumberOfRows();
             logger.info("总共行数为：{}", rowNum);
-            for(int j=0; j<rowNum; j++){
+            for (int j = 0; j < rowNum; j++) {
                 //获取到第三列
                 HSSFCell hssfCell = hssfSheet.getRow(j).getCell(2);
                 //获取单元格的值
                 String cellVal = hssfCell.getStringCellValue();
                 logger.info("单元格的值为：{}", cellVal);
                 //满足此条件
-                if(!StringUtils.isEmpty(cellVal) && cellVal.length() ==4 && isNumber(cellVal)){
+                if (!StringUtils.isEmpty(cellVal) && cellVal.length() == 4 && isNumber(cellVal)) {
                     //进行操作
                     logger.info("进行格式操作...");
                     hssfSheet.getRow(j).setRowStyle(getStyleHssf(hssfWorkbook));
+                    hssfCell.setCellStyle(getStyleHssf(hssfWorkbook));
                 }
             }
         }
+
+        return hssfWorkbook;
     }
 
     /**
      * 获取单元格值
+     *
      * @param cell
      * @return
      */
@@ -214,7 +249,7 @@ public class HandlerOneService {
             XSSFWorkbook xssfWorkbook = (XSSFWorkbook) WorkbookFactory.create(fileInputStream);
 
             //当数据量超出65536条后
-            SXSSFWorkbook sxssfWorkbook = (SXSSFWorkbook ) WorkbookFactory.create(fileInputStream);
+            SXSSFWorkbook sxssfWorkbook = (SXSSFWorkbook) WorkbookFactory.create(fileInputStream);
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         } catch (InvalidFormatException e) {
@@ -277,5 +312,131 @@ public class HandlerOneService {
         cellStyle.setBorderTop(HSSFCellStyle.BORDER_MEDIUM);
         cellStyle.setTopBorderColor(HSSFColor.BLACK.index);*/
 
+    }
+
+    public static void main(String[] args) {
+        try {
+            // 创建新的Excel 工作簿
+            HSSFWorkbook workbook = new HSSFWorkbook();
+
+            // 设置字体
+            HSSFFont font = workbook.createFont();
+            // font.setColor(HSSFFont.COLOR_RED);
+            font.setBoldweight(HSSFFont.BOLDWEIGHT_BOLD);
+            font.setFontHeightInPoints((short) 14);
+
+            // HSSFFont font2 = workbook.createFont();
+            // font.setBoldweight(HSSFFont.BOLDWEIGHT_BOLD);
+            // font.setFontHeightInPoints((short)14);
+
+            // 设置样式
+            HSSFCellStyle cellStyle = workbook.createCellStyle();
+            cellStyle.setFont(font);
+            cellStyle.setAlignment(HSSFCellStyle.ALIGN_CENTER);
+            //cellStyle.setFillBackgroundColor(HSSFColor.YELLOW.index);
+            cellStyle.setFillForegroundColor(HSSFColor.YELLOW.index);
+            cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
+            // HSSFCellStyle cellStyle2= workbook.createCellStyle();
+            // cellStyle.setFont(font2);
+            // cellStyle.setAlignment(HSSFCellStyle.ALIGN_CENTER);
+
+            // 在Excel工作簿中建一工作表，其名为缺省值
+            // 如要新建一名为"月报表"的工作表，其语句为：
+            HSSFSheet sheet = workbook.createSheet("月报表");
+            CellRangeAddress cellRangeAddress = new CellRangeAddress(0, 0, 0,
+                    11);
+            sheet.addMergedRegion(cellRangeAddress);
+
+            //第一行
+            // 在索引0的位置创建行（最顶端的行）
+            HSSFRow row = sheet.createRow(0);
+            // 在索引0的位置创建单元格（左上端）
+            HSSFCell cell = row.createCell(0);
+            // 定义单元格为字符串类型
+            cell.setCellType(HSSFCell.CELL_TYPE_STRING);
+            cell.setCellStyle(cellStyle);
+            // 在单元格中输入一些内容
+            cell.setCellValue(new HSSFRichTextString("北京亿卡联科技发展有限公司小区门禁维修月报表"));
+
+            //第二行
+            cellRangeAddress = new CellRangeAddress(1, 1, 3, 6);
+            sheet.addMergedRegion(cellRangeAddress);
+            row = sheet.createRow(1);
+            HSSFCell datecell = row.createCell(3);
+            datecell.setCellType(HSSFCell.CELL_TYPE_STRING);
+            datecell.setCellStyle(cellStyle);
+            datecell.setCellValue("时间间隔xxxxx");
+
+            cellRangeAddress = new CellRangeAddress(1, 1, 9,
+                    10);
+            sheet.addMergedRegion(cellRangeAddress);
+            row.createCell(9).setCellValue("单位：元");
+
+            //第三行
+            row = sheet.createRow(2);
+            row.createCell(0).setCellValue("一、");
+            row.createCell(1).setCellValue("基本资料");
+
+            //第4行
+            row = sheet.createRow(3);
+            row.createCell(1).setCellValue("小区名称：");
+            cellRangeAddress = new CellRangeAddress(3, 3, 2, 11);
+            sheet.addMergedRegion(cellRangeAddress);
+            row.createCell(2).setCellValue("xxxxx");
+
+            //第5行
+            row = sheet.createRow(4);
+            row.createCell(1).setCellValue("座落地点：");
+            cellRangeAddress = new CellRangeAddress(4, 4, 2, 11);
+            sheet.addMergedRegion(cellRangeAddress);
+            row.createCell(2).setCellValue("xxxxx");
+
+            //填充数据
+            /*for (int i = 0; i < 10; i++) {
+                row = sheet.createRow(9 + i + 1);
+                row.createCell(0).setCellValue("日期");
+                row.createCell(1).setCellValue("维修事项");
+                row.createCell(2).setCellValue("材料清单");
+                row.createCell(3).setCellValue("数量");
+                row.createCell(4).setCellValue("单价");
+                row.createCell(5).setCellValue("材料金额");
+
+                row.createCell(7).setCellValue("日期");
+                row.createCell(8).setCellValue("技工");
+                row.createCell(9).setCellValue("工时数");
+                row.createCell(10).setCellValue("单价");
+                row.createCell(11).setCellValue("工时金额");
+            }*/
+
+            //第n+10行
+            row = sheet.createRow(8);
+            //cellRangeAddress=new CellRangeAddress(19,19,0,4);
+            //sheet.addMergedRegion(cellRangeAddress);
+            row.createCell(0).setCellValue("累计:");
+            row.createCell(1).setCellValue("xxx");
+            row.createCell(7).setCellValue("累计:");
+            row.createCell(8).setCellValue("xxx");
+
+
+            // 新建一输出文件流
+            FileOutputStream fOut = new FileOutputStream(outputFile);
+            // 把相应的Excel 工作簿存盘
+            workbook.write(fOut);
+            fOut.flush();
+            // 操作结束，关闭文件
+            fOut.close();
+            System.out.println("文件生成...");
+        } catch (Exception e) {
+            System.out.println("已运行 xlCreate() : " + e);
+        }
+    }
+
+    private void cteateCell(HSSFWorkbook wb, HSSFRow row, short col, String val) {
+        HSSFCell cell = row.createCell(col);
+        // cell.setEncoding(HSSFCell.ENCODING_UTF_16);
+        cell.setCellValue(val);
+        HSSFCellStyle cellstyle = wb.createCellStyle();
+        cellstyle.setAlignment(HSSFCellStyle.ALIGN_CENTER_SELECTION);
+        cell.setCellStyle(cellstyle);
     }
 }
